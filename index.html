@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Kiosk System</title>
+</head>
+<body>
+    <h1 id="loadingMessage">Kiosk İçerik Yükleniyor...</h1>
+    <iframe id="kioskFrame" onload="hideLoadingMessage()"></iframe>
+    <script src="kiosk.js"></script>
+    <script>
+
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data.type === 'version-update') {
+            console.log("Yeni versiyon mevcut, sayfa güncelleniyor...");
+            // Sayfa yenileme (Hard Refresh)
+            window.location.reload();
+        }
+    });
+}
+    </script>
+</body>
+</html>
