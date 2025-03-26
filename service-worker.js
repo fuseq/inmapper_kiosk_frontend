@@ -38,18 +38,28 @@ function listenForVersionChanges() {
 // Cache güncelleme ve client'lara bildirim gönderme
 async function updateCacheAndNotifyClients(newVersion) {
     const cache = await caches.open("kiosk-cache-v1");
-    const cachedVersionResponse = await cache.match("/version");
-    const cachedData = cachedVersionResponse ? await cachedVersionResponse.json() : null;
+    let cachedVersion = null;
 
-    if (!cachedData || cachedData.version !== newVersion) {
+    try {
+        const cachedVersionResponse = await cache.match("/version");
+        if (cachedVersionResponse && cachedVersionResponse.ok) {
+            const cachedData = await cachedVersionResponse.json();
+            cachedVersion = cachedData.version;
+        }
+    } catch (error) {
+        console.error("Service Worker: Cache'ten versiyon bilgisi okunurken hata oluştu:", error);
+    }
+
+    if (cachedVersion !== newVersion) {
         console.log("Service Worker: Yeni versiyon tespit edildi, cache güncelleniyor...");
 
-        // Eski cache'i temizleyin
-        await caches.delete("kiosk-cache-v1");
-        console.log("Service Worker: Eski cache temizlendi.");
+        // Eski cache'i temizleyin (dikkatli olun, tüm cache'i silmek yerine sadece versiyon bilgisini güncelleyebilirsiniz)
+        // await caches.delete("kiosk-cache-v1");
+        // console.log("Service Worker: Eski cache temizlendi.");
 
         // Yeni versiyon ile cache'i güncelle
         await cache.put("/version", new Response(JSON.stringify({ version: newVersion })));
+        console.log("Service Worker: Cache'e yeni versiyon kaydedildi:", newVersion);
 
         // Tüm client'lara yeni versiyon bilgisini gönder
         self.clients.matchAll().then(clients => {
@@ -58,14 +68,7 @@ async function updateCacheAndNotifyClients(newVersion) {
                 client.postMessage({ type: 'version-update' });
             });
         });
-
-        // Sayfa yenileme (hard refresh) işlemi
-        self.clients.matchAll().then(clients => {
-            clients.forEach(client => {
-                client.postMessage({ type: 'refresh' });
-            });
-        });
     } else {
-        console.log("Service Worker: Cache zaten güncel, versiyon değişmedi.");
+        console.log("Service Worker: Cache zaten güncel (", cachedVersion, "), yeni versiyon (", newVersion, ") ile aynı.");
     }
 }
